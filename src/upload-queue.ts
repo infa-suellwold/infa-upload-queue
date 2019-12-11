@@ -2,7 +2,7 @@ import { SQLite } from '@ionic-native/sqlite/ngx';
 import { IJsonStorageItemMeta, IJsonStorageStoredObject } from 'infa-json-storage/dist/json-storage.interfaces';
 import { String } from 'typescript-string-operations';
 import { JsonStorage } from 'infa-json-storage/dist/json-storage';
-import { IUploadQueue, IUploadQueueOptions } from './upload-queue.interfaces';
+import { IUploadQueue, IUploadQueueOptions, IUploadQueueResponse } from './upload-queue.interfaces';
 import { HttpClient } from '@angular/common/http';
 
 export abstract class UploadQueue<T> extends JsonStorage<T> implements IUploadQueue
@@ -36,7 +36,7 @@ export abstract class UploadQueue<T> extends JsonStorage<T> implements IUploadQu
         }
     }
 
-    async send(): Promise<Date> {
+    async send<R extends IUploadQueueResponse>(): Promise<R> {
         const meta: Array<IJsonStorageItemMeta> = (await this.getMeta())
             .sort((l: IJsonStorageItemMeta, r: IJsonStorageItemMeta) => {
                 return l.timestamp.getMilliseconds() - r.timestamp.getMilliseconds()
@@ -49,6 +49,6 @@ export abstract class UploadQueue<T> extends JsonStorage<T> implements IUploadQu
                 items.push(item);
             }
         }
-        return this.http.post<Date>(await this.url(), items).toPromise();
+        return this.http.post<R>(await this.url(), items).toPromise();
     }
 }

@@ -5,6 +5,10 @@ export interface IUploadQueueOptions extends IJsonStorageOptions {
     staticUrl?: string;
 }
 
+export interface IUploadQueueResponse {
+    timestamp: Date;
+}
+
 export interface IUploadQueue {
     /**
      * Gibt das Datum des ältesten Datensatzes an, der sich im Datenspeicher befindet.
@@ -33,5 +37,5 @@ export interface IUploadQueue {
      * werden können. Dies setzt voraus, dass das Senden der Elemente stets nach dem
      * FIFO-Prinzip gesendet werden (älteste zuerst).
      */
-    send(): Promise<Date>;
+    send<R extends IUploadQueueResponse>(): Promise<R>;
 }

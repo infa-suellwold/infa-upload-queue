@@ -24,7 +24,7 @@ export class UploadQueueService
         }
         this.timerId = setInterval(async () => {
             for (let handler of this.handlers) {
-                let timestamp: Date = await handler.queue.send();
+                let timestamp: Date = (await handler.queue.send()).timestamp;
                 if (timestamp) {
                     await handler.queue.clear(timestamp);
                 }

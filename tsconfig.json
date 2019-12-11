@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "module": "commonjs",
+    "lib": ["es2015", "dom"],
+    "declaration": true,
+    "outDir": "./dist",
+    "strict": true,
+    "experimentalDecorators": true
+  },
+  "include": ["src/*", "src/data-observable-tuple.model.ts", "src/internal/service-state.model.ts"],
+  "exclude": ["node_modules", "**/__tests__/*"]
+}

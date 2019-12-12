@@ -1,6 +1,6 @@
 {
   "name": "infa-upload-queue",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Persistent data buffer cleaned up when objects have successfully been pushed to a server.",
   "main": "index.js",
   "scripts": {

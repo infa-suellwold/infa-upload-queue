@@ -37,5 +37,5 @@ export interface IUploadQueue {
      * werden können. Dies setzt voraus, dass das Senden der Elemente stets nach dem
      * FIFO-Prinzip gesendet werden (älteste zuerst).
      */
-    send<R extends IUploadQueueResponse>(): Promise<R>;
+    send(): Promise<void>;
 }

@@ -1,7 +1,7 @@
 import { SQLite } from '@ionic-native/sqlite/ngx';
 import { HttpClient } from '@angular/common/http';
 import { UploadQueue } from './upload-queue';
-import { IUploadQueue } from './upload-queue.interfaces';
+import { IUploadQueue, IUploadQueueResponse } from './upload-queue.interfaces';
 import { JsonStorage } from 'infa-json-storage/dist/json-storage';
 import { Injectable } from '@angular/core';
 
@@ -24,10 +24,7 @@ export class UploadQueueService
         }
         this.timerId = setInterval(async () => {
             for (let handler of this.handlers) {
-                let timestamp: Date = (await handler.queue.send()).timestamp;
-                if (timestamp) {
-                    await handler.queue.clear(timestamp);
-                }
+                await handler.queue.send();
             }   
         }, interval ? interval : 10000);
     }
@@ -39,7 +36,7 @@ export class UploadQueueService
         clearInterval(this.timerId);
     }
 
-    public register<T>(id: string, handler: UploadQueue<T>) {
+    public register<T, R extends IUploadQueueResponse>(id: string, handler: UploadQueue<T, R>) {
         this.unregister(id);
         this.handlers.push({ id, queue: handler });
     }
@@ -51,7 +48,7 @@ export class UploadQueueService
         }
     }
 
-    public find<T>(id: string): (IUploadQueue & JsonStorage<T>) | undefined {
+    public findHandler<T>(id: string): (IUploadQueue & JsonStorage<T>) | undefined {
         const item = this.handlers.find(x => x.id === id);
         if (item) {
             return item.queue as (IUploadQueue & JsonStorage<T>);

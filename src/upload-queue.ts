@@ -5,7 +5,7 @@ import { JsonStorage } from 'infa-json-storage/dist/json-storage';
 import { IUploadQueue, IUploadQueueOptions, IUploadQueueResponse } from './upload-queue.interfaces';
 import { HttpClient } from '@angular/common/http';
 
-export abstract class UploadQueue<T> extends JsonStorage<T> implements IUploadQueue
+export abstract class UploadQueue<T, R extends IUploadQueueResponse> extends JsonStorage<T> implements IUploadQueue
 {
     constructor(
         protected sqlite: SQLite,
@@ -36,7 +36,14 @@ export abstract class UploadQueue<T> extends JsonStorage<T> implements IUploadQu
         }
     }
 
-    async send<R extends IUploadQueueResponse>(): Promise<R> {
+    /**
+     * 
+     * @param response Das zurückgegebene Objekt muss einen Zeitstempel enthalten.
+     * Dazu ist erforderlich, dass es IUploadQueueResponse implementiert.
+     */
+    public abstract onHandleResponse(response: R): void;
+
+    public async send(): Promise<void> {
         const meta: Array<IJsonStorageItemMeta> = (await this.getMeta())
             .sort((l: IJsonStorageItemMeta, r: IJsonStorageItemMeta) => {
                 return l.timestamp.getMilliseconds() - r.timestamp.getMilliseconds()
@@ -49,6 +56,7 @@ export abstract class UploadQueue<T> extends JsonStorage<T> implements IUploadQu
                 items.push(item);
             }
         }
-        return this.http.post<R>(await this.url(), items).toPromise();
+        const response: R = await this.http.post<R>(await this.url(), items).toPromise();
+        this.onHandleResponse(response);
     }
 }

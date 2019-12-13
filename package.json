@@ -1,6 +1,6 @@
 {
   "name": "infa-upload-queue",
-  "version": "1.0.9",
+  "version": "1.0.11",
   "description": "Persistent data buffer cleaned up when objects have successfully been pushed to a server.",
   "main": "index.js",
   "scripts": {
@@ -32,15 +32,15 @@
   "homepage": "https://github.com/infa-suellwold/infa-upload-queue#readme",
   "devDependencies": {
     "@angular/common": "^8.2.14",
+    "@angular/core": "^8.2.14",
     "@ionic-native/core": "^5.18.0",
     "@ionic-native/sqlite": "^5.18.0",
-    "infa-json-storage": "^1.0.12",
+    "infa-json-storage": "^1.0.14",
     "prettier": "^1.19.1",
     "rxjs": "^6.5.3",
     "tslint": "^5.20.1",
     "tslint-config-prettier": "^1.18.0",
     "typescript": "^3.7.3",
-    "typescript-string-operations": "^1.3.1",
-    "@angular/core": "^8.2.14"
+    "typescript-string-operations": "^1.3.1"
   }
 }

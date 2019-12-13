@@ -1,4 +1,4 @@
-import { IJsonStorageOptions } from "infa-json-storage/dist/json-storage.interfaces";
+import { IJsonStorageOptions, IJsonStorageKey } from "infa-json-storage/dist/json-storage.interfaces";
 
 export interface IUploadQueueOptions extends IJsonStorageOptions {
     /**
@@ -48,9 +48,11 @@ export interface IUploadQueue {
      * Entfernt alle Einträge aus der Tabelle. Wird ein Zeitstempel angegeben, so
      * werden alle Einträge, die nach dem angegebenen Zeitstempel eingetragen wurden,
      * beim Löschen ignoriert.
+     * Anstelle eines Zeitstempels kann auch ein Schlüsselpaar eingetragen werden,
+     * das mehrere oder einen einzelnen Eintrag in der Datenbank zu referenzieren.
      * @param timestamp 
      */
-    clear(timestamp?: Date): Promise<void>;
+    clear(key?: IJsonStorageKey, timestamp?: Date): Promise<void>;
 
     /**
      * Liefert die WebAdresse zurück, zu der die Datenpakete gesendet werden.

@@ -52,7 +52,7 @@ export interface IUploadQueue {
      * das mehrere oder einen einzelnen Eintrag in der Datenbank zu referenzieren.
      * @param timestamp 
      */
-    clear(key?: IJsonStorageKey, timestamp?: Date): Promise<void>;
+    clear(options: { key?: IJsonStorageKey, timestamp?: Date }): Promise<void>;
 
     /**
      * Liefert die WebAdresse zurück, zu der die Datenpakete gesendet werden.

@@ -45,14 +45,14 @@ export interface IUploadQueue {
     age(): Promise<Date | void>;
 
     /**
-     * Entfernt alle Einträge aus der Tabelle. Wird ein Zeitstempel angegeben, so
-     * werden alle Einträge, die nach dem angegebenen Zeitstempel eingetragen wurden,
-     * beim Löschen ignoriert.
-     * Anstelle eines Zeitstempels kann auch ein Schlüsselpaar eingetragen werden,
-     * das mehrere oder einen einzelnen Eintrag in der Datenbank zu referenzieren.
-     * @param timestamp 
+     * Entfernt unwiderruflich alle Einträge aus dem aktuellen Datenspeicher.
+     * @param filterExpression Die zu löschenden Einträge können über den Filterausdruck
+     * eingeschränkt werden. Entweder wird ein Filterobjekt angegeben, das über einen
+     * Schlüssel vom Typ _IJsonStorageKey_ und / oder einen Zeitstempel vom Typ _Date_
+     * verfügen kann, oder ein beliebiger SQL-Filterausdruck, der in der WHERE-Bedingung
+     * verarbeitet wird.
      */
-    clear(options: { key?: IJsonStorageKey, timestamp?: Date }): Promise<void>;
+    clear(filterExpression: { key?: IJsonStorageKey, timestamp?: Date } | string): Promise<void>;
 
     /**
      * Liefert die WebAdresse zurück, zu der die Datenpakete gesendet werden.

@@ -92,8 +92,8 @@ export abstract class UploadQueue<T, R> extends JsonStorage<T> implements IUploa
 
     public async age(): Promise<Date | void> {
         const statement: string = String.Format('select top 1 timestamp from {0} order by timestamp asc', this.options.table);
-        return this._databaseObject().then(async (db) => {
-            await this._anyway(db.executeSql(statement), (t) => {
+        return this.db().then(db => {
+            return db.executeSql(statement).then((t) => {
                 if (t.rows.length > 0) {
                     return Promise.resolve(t.rows.item(0).timestamp);
                 } else {
@@ -126,7 +126,16 @@ export abstract class UploadQueue<T, R> extends JsonStorage<T> implements IUploa
      *   // ergänzende eigene Implementierung
      * }
      */
-    public abstract onHandleResponse(response: R | Array<R>): void;
+    public abstract onHandleResponse(response: R | Array<R>): Promise<void>;
+
+    /**
+     * Man kann diese Methode überschreiben, um das Datenobjekt vor dem Absenden
+     * auf Basis des übergebenen _item_ für die API umzugestalten, anstatt
+     * das _item_ direkt zu senden.
+     */
+    public transformSend(item: IJsonStorageStoredObject<T>): Promise<any> {
+        return Promise.resolve(item);
+    }
 
     /**
      * Die Basisimplementierung von _send()_ fragt die ältesten Einträge aus
@@ -144,14 +153,25 @@ export abstract class UploadQueue<T, R> extends JsonStorage<T> implements IUploa
             .filter((v, i) => !this.options.maxLength || i < this.options.maxLength);
         const items: Array<IJsonStorageStoredObject<T>> = new Array<IJsonStorageStoredObject<T>>();
         for (var key of meta) {
-            const item: (void | IJsonStorageStoredObject<T>) = await this.restore(key);
-            if (item) {
-                items.push(item);
-            }
+            await this.restore(key).then(item => {
+                if (item) {
+                    items.push(item);
+                }
+            });
         }
         if (items.length > 0) {
-            const response: R | Array<R> = await this.http.post<Array<R>>(await this.url(), items).toPromise();
-            this.onHandleResponse(response);
+            const sendData: Array<any> = new Array<any>();
+            Promise.all(items.map(x => {
+                this.transformSend(x).then(t => sendData.push(t));
+            })).then(
+                () => {
+                    this.url().then(url => {
+                        this.http.post<Array<R>>(url, sendData).toPromise().then(
+                            (response: R | Array<R>) => this.onHandleResponse(response)
+                        )
+                    });
+                }
+            )
         }
     }
 }

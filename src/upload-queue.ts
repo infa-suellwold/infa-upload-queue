@@ -1,5 +1,5 @@
 import { SQLite } from '@ionic-native/sqlite/ngx';
-import { IJsonStorageItemMeta, IJsonStorageStoredObject } from 'infa-json-storage/dist/json-storage.interfaces';
+import { IJsonStorageItemMeta, IJsonStorageStoredObject, IJsonStorageKey } from 'infa-json-storage/dist/json-storage.interfaces';
 import { String } from 'typescript-string-operations';
 import { JsonStorage } from 'infa-json-storage/dist/json-storage';
 import { IUploadQueue, IUploadQueueOptions } from './upload-queue.interfaces';
@@ -82,12 +82,15 @@ import { HttpClient } from '@angular/common/http';
  */
 export abstract class UploadQueue<T, R> extends JsonStorage<T> implements IUploadQueue
 {
+    protected pending: Array<IJsonStorageKey>;
+
     constructor(
         protected sqlite: SQLite,
         protected http: HttpClient,
         protected options: IUploadQueueOptions) 
     {
         super(sqlite, options);
+        this.pending = new Array<IJsonStorageKey>();
     }
 
     public async age(): Promise<Date | void> {
@@ -137,6 +140,20 @@ export abstract class UploadQueue<T, R> extends JsonStorage<T> implements IUploa
         return Promise.resolve(item);
     }
 
+    protected findPending(key: IJsonStorageKey): IJsonStorageKey | undefined {
+        if (!this.pending)
+            return;
+        for (const p of this.pending) {
+            for (const k of p.keys) {
+                const kc = key.keys.find(x => x.column === k.column);
+                if (!kc || (kc.value !== k.value)) {
+                    return;
+                }
+            }
+            return p;
+        }
+    }
+
     /**
      * Die Basisimplementierung von _send()_ fragt die ältesten Einträge aus
      * dem Speicher bis zu einer maximalen Anzahl von _maxlength_ ab und
@@ -147,27 +164,46 @@ export abstract class UploadQueue<T, R> extends JsonStorage<T> implements IUploa
      */
     public async send(): Promise<void> {
         const meta: Array<IJsonStorageItemMeta> = (await this.getMeta())
+            .filter((v) => !this.findPending(v))
             .sort((l: IJsonStorageItemMeta, r: IJsonStorageItemMeta) => {
                 return l.timestamp.getMilliseconds() - r.timestamp.getMilliseconds()
             })
             .filter((v, i) => !this.options.maxLength || i < this.options.maxLength);
-        const items: Array<IJsonStorageStoredObject<T>> = new Array<IJsonStorageStoredObject<T>>();
+        const items: Array<{ key: IJsonStorageKey, item: IJsonStorageStoredObject<T> }> = new Array<{ key: IJsonStorageKey, item: IJsonStorageStoredObject<T> }>();
         for (var key of meta) {
             await this.restore(key).then(item => {
                 if (item) {
-                    items.push(item);
+                    items.push({ key, item });
                 }
             });
         }
         if (items.length > 0) {
-            const sendData: Array<any> = new Array<any>();
+            const transformedItems: Array<{ key: IJsonStorageKey, transformed: any }> = new Array<{ key: IJsonStorageKey, transformed: any }>();
             Promise.all(items.map(x => {
-                this.transformSend(x).then(t => sendData.push(t));
+                this.transformSend(x.item).then(t => transformedItems.push({ key: x.key, transformed: t }));
             })).then(
                 () => {
                     this.url().then(url => {
-                        this.http.post<Array<R>>(url, sendData).toPromise().then(
-                            (response: R | Array<R>) => this.onHandleResponse(response)
+                        transformedItems.map(x => x.key).forEach(k => this.pending.push(k));
+                        this.http.post<Array<R>>(url, transformedItems.map(x => x.transformed)).toPromise().then(
+                            (response: R | Array<R>) => {
+                                transformedItems.map(x => x.key).forEach(k => {
+                                    const idx: number = this.pending.indexOf(k);
+                                    if (idx > -1) {
+                                        this.pending.splice(idx, 1);
+                                    }
+                                });
+                                return this.onHandleResponse(response);
+                            },
+                            (e) => {
+                                transformedItems.map(x => x.key).forEach(k => {
+                                    const idx: number = this.pending.indexOf(k);
+                                    if (idx > -1) {
+                                        this.pending.splice(idx, 1);
+                                    }
+                                });
+                                return Promise.reject(e);
+                            }
                         )
                     });
                 }

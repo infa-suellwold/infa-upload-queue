@@ -34,7 +34,11 @@ export abstract class UploadQueueService
         this.timerId = setInterval(async () => {
             const handlers: Array<IUploadQueue> = this.getHandlers();
             for (let handler of handlers) {
-                await handler.send();
+                try {
+                    await handler.send();
+                } catch (e) {
+                    console.error("Error while sending data to server: " + (typeof e === "object" ? JSON.stringify(e) : e.toString()))
+                }
             }   
         }, interval ? interval : 10000);
     }

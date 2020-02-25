@@ -1,4 +1,4 @@
-import { IJsonStorageOptions, IJsonStorageKey } from "infa-json-storage/dist/json-storage.interfaces";
+import { IJsonStorageOptions, IJsonStorageKey } from 'infa-json-storage/dist/json-storage.interfaces';
 
 export interface IUploadQueueOptions extends IJsonStorageOptions {
     /**

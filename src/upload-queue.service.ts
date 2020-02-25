@@ -37,10 +37,11 @@ export abstract class UploadQueueService
                 try {
                     await handler.send();
                 } catch (e) {
-                    console.error("Error while sending data to server: " + (typeof e === "object" ? JSON.stringify(e) : e.toString()))
+                    console.error('Exceptional error while trying to upload data.', handler, this);
                 }
             }   
         }, interval ? interval : 10000);
+        console.log('Upload service started.', this.constructor.name, this.timerId, this);
     }
 
     /** 
@@ -51,6 +52,7 @@ export abstract class UploadQueueService
             return;
         }
         clearInterval(this.timerId);
+        console.log('Upload service stopped.', this.constructor.name, this);
     }
 
     /**

@@ -169,6 +169,9 @@ export abstract class UploadQueue<T, R> extends JsonStorage<T> implements IUploa
                 return l.timestamp.getMilliseconds() - r.timestamp.getMilliseconds()
             })
             .filter((v, i) => !this.options.maxLength || i < this.options.maxLength);
+        if (meta.length === 0) {
+            return Promise.resolve();
+        }
         const items: Array<{ key: IJsonStorageKey, item: IJsonStorageStoredObject<T> }> = new Array<{ key: IJsonStorageKey, item: IJsonStorageStoredObject<T> }>();
         for (var key of meta) {
             await this.restore(key).then(item => {

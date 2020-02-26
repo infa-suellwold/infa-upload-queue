@@ -52,6 +52,7 @@ export abstract class UploadQueueService
             return;
         }
         clearInterval(this.timerId);
+        this.timerId = undefined;
         console.log('Upload service stopped.', this.constructor.name, this);
     }
 

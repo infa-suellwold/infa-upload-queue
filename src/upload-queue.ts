@@ -154,15 +154,7 @@ export abstract class UploadQueue<T, R> extends JsonStorage<T> implements IUploa
         }
     }
 
-    /**
-     * Die Basisimplementierung von _send()_ fragt die ältesten Einträge aus
-     * dem Speicher bis zu einer maximalen Anzahl von _maxlength_ ab und
-     * sendet diese als Array via POST an die angegebene Server-URL.
-     * Der Rückgabewert von POST kann entweder ein Objekt vom
-     * generischen Typ _R_ oder Array<_R_> sein, womit im Anschluss
-     * _onHandleResponse(response)_ aufgerufen wird.
-     */
-    public async send(): Promise<void> {
+    protected async getItemsForSending(): Promise<{ key: IJsonStorageKey, item: IJsonStorageStoredObject<T> }[]> {
         const meta: Array<IJsonStorageItemMeta> = (await this.getMeta())
             .filter((v) => !this.findPending(v))
             .sort((l: IJsonStorageItemMeta, r: IJsonStorageItemMeta) => {
@@ -170,7 +162,7 @@ export abstract class UploadQueue<T, R> extends JsonStorage<T> implements IUploa
             })
             .filter((v, i) => !this.options.maxLength || i < this.options.maxLength);
         if (meta.length === 0) {
-            return Promise.resolve();
+            return Promise.resolve([]);
         }
         const items: Array<{ key: IJsonStorageKey, item: IJsonStorageStoredObject<T> }> = new Array<{ key: IJsonStorageKey, item: IJsonStorageStoredObject<T> }>();
         for (var key of meta) {
@@ -180,37 +172,52 @@ export abstract class UploadQueue<T, R> extends JsonStorage<T> implements IUploa
                 }
             });
         }
-        if (items.length > 0) {
-            const transformedItems: Array<{ key: IJsonStorageKey, transformed: any }> = new Array<{ key: IJsonStorageKey, transformed: any }>();
-            Promise.all(items.map(x => {
-                this.transformSend(x.item).then(t => transformedItems.push({ key: x.key, transformed: t }));
-            })).then(
-                () => {
-                    this.url().then(url => {
-                        transformedItems.map(x => x.key).forEach(k => this.pending.push(k));
-                        this.http.post<Array<R>>(url, transformedItems.map(x => x.transformed)).toPromise().then(
-                            (response: R | Array<R>) => {
-                                transformedItems.map(x => x.key).forEach(k => {
-                                    const idx: number = this.pending.indexOf(k);
-                                    if (idx > -1) {
-                                        this.pending.splice(idx, 1);
-                                    }
-                                });
-                                return this.onHandleResponse(response);
-                            },
-                            (e) => {
-                                transformedItems.map(x => x.key).forEach(k => {
-                                    const idx: number = this.pending.indexOf(k);
-                                    if (idx > -1) {
-                                        this.pending.splice(idx, 1);
-                                    }
-                                });
-                                return Promise.reject(e);
-                            }
-                        )
+        return items;
+    }
+
+    /**
+     * Die Basisimplementierung von _send()_ fragt die ältesten Einträge aus
+     * dem Speicher bis zu einer maximalen Anzahl von _maxlength_ ab und
+     * sendet diese als Array via POST an die angegebene Server-URL.
+     * Der Rückgabewert von POST kann entweder ein Objekt vom
+     * generischen Typ _R_ oder Array<_R_> sein, womit im Anschluss
+     * _onHandleResponse(response)_ aufgerufen wird.
+     */
+    public async send(): Promise<void> {
+        const items: Array<{ key: IJsonStorageKey, item: IJsonStorageStoredObject<T> }> = await this.getItemsForSending();
+        if (items.length === 0) {
+            return;
+        }
+        const transformedItems: Array<{ key: IJsonStorageKey, transformed: any }> = new Array<{ key: IJsonStorageKey, transformed: any }>();
+        for (let x of items) {
+            await this.transformSend(x.item).then(
+                t => transformedItems.push({ key: x.key, transformed: t }),
+                e => {
+                    console.warn('Item transformation failed.', e, x);
+                });
+        }
+        return this.url().then(url => {
+            transformedItems.map(x => x.key).forEach(k => this.pending.push(k));
+            return this.http.post<Array<R>>(url, transformedItems.map(x => x.transformed)).toPromise().then(
+                (response: R | Array<R>) => {
+                    transformedItems.map(x => x.key).forEach(k => {
+                        const idx: number = this.pending.indexOf(k);
+                        if (idx > -1) {
+                            this.pending.splice(idx, 1);
+                        }
                     });
+                    return this.onHandleResponse(response);
+                },
+                (e) => {
+                    transformedItems.map(x => x.key).forEach(k => {
+                        const idx: number = this.pending.indexOf(k);
+                        if (idx > -1) {
+                            this.pending.splice(idx, 1);
+                        }
+                    });
+                    return Promise.reject(e);
                 }
             )
-        }
+        })
     }
 }

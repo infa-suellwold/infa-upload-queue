@@ -32,7 +32,7 @@
   "homepage": "https://github.com/infa-suellwold/infa-upload-queue#readme",
   "devDependencies": {
     "@angular/common": "^8.2.14",
-    "@angular/core": "^8.2.14",
+    "@angular/core": "^11.0.5",
     "@ionic-native/core": "^5.19.1",
     "@ionic-native/sqlite": "^5.19.1",
     "infa-json-storage": "^1.0.68",
